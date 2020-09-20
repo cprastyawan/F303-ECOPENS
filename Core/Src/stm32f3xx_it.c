@@ -23,6 +23,7 @@
 #include "stm32f3xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdbool.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+bool PWMHigh = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,11 +63,12 @@ extern COMP_HandleTypeDef hcomp1;
 extern COMP_HandleTypeDef hcomp2;
 extern COMP_HandleTypeDef hcomp3;
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim15;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
+extern TIM_HandleTypeDef htim2;
 extern DMA_Event_t dma_uart_rx;
 extern uint8_t compState;
 extern uint16_t commutationTimerCounter;
@@ -84,6 +86,15 @@ extern uint16_t setPWM,newPWM;
 extern uint8_t pwmState;
 extern int16_t compWindowOffset;
 extern DAC_HandleTypeDef hdac;
+
+extern ADC_ChannelConfTypeDef sConfig;
+extern uint32_t adcIntegral;
+extern uint32_t adcOffset;
+extern uint8_t adcCounter;
+
+extern uint32_t tim2cnt;
+extern bool readRotation;
+
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -248,7 +259,14 @@ void DMA1_Channel5_IRQHandler(void)
 void ADC1_2_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC1_2_IRQn 0 */
-
+	if(__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_EOC) == SET){
+		adcIntegral += HAL_ADC_GetValue(&hadc2);
+	}
+	if(adcIntegral >= adcOffset){
+		HAL_ADC_Stop_IT(&hadc2);
+		adcIntegral = 0;
+		commutationPattern(NEXT);
+	}
   /* USER CODE END ADC1_2_IRQn 0 */
   HAL_ADC_IRQHandler(&hadc1);
   HAL_ADC_IRQHandler(&hadc2);
@@ -266,6 +284,7 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 
   /* USER CODE END TIM1_BRK_TIM15_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
+  HAL_TIM_IRQHandler(&htim15);
   /* USER CODE BEGIN TIM1_BRK_TIM15_IRQn 1 */
 
   /* USER CODE END TIM1_BRK_TIM15_IRQn 1 */
@@ -277,6 +296,27 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 void TIM1_CC_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_CC_IRQn 0 */
+	/*if(__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_CC2) != RESET){
+		if(__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_EOC) != RESET){
+			adcIntegral += HAL_ADC_GetValue(&hadc2);
+		}
+		if(PWMHigh){
+			//while(TIM1->CNT < TIM1->CCR2){
+			//for(int i = 0; i < setPWM / 100; i++);
+
+			//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+		} else if(!PWMHigh){
+
+		}
+
+		PWMHigh = !PWMHigh;
+	}*/
+	/*if(adcIntegral >= adcOffset){
+		adcIntegral = 0;
+		__HAL_TIM_DISABLE_IT(&htim1, TIM_IT_CC2);
+		//HAL_ADC_Stop(&hadc2);
+		commutationPattern(NEXT);
+	}*/
 
   /* USER CODE END TIM1_CC_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
@@ -286,29 +326,15 @@ void TIM1_CC_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM2 global interrupt.
-  */
-void TIM2_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM2_IRQn 0 */
-
-  /* USER CODE END TIM2_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim2);
-  /* USER CODE BEGIN TIM2_IRQn 1 */
-
-  /* USER CODE END TIM2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM3 global interrupt.
   */
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
-	if((__HAL_TIM_GET_FLAG(&htim3,TIM_FLAG_CC1)== SET) && waitForCommutation == 1)
-	{
-		commutationPattern(NEXT);
-	}
+	//if((__HAL_TIM_GET_FLAG(&htim3,TIM_FLAG_CC1)== SET) && waitForCommutation == 1)
+	//{
+		//commutationPattern(NEXT);
+	//}
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -345,11 +371,14 @@ void COMP1_2_3_IRQHandler(void)
 
 	if(__HAL_COMP_COMP1_EXTI_GET_FLAG() && waitForCommutation == 0){
 		HAL_COMP_Stop_IT(&hcomp1);
-		commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
+		sConfig.Channel = ADC_CHANNEL_2;
+
+		/*commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
 		commutationTimerCounterAverage = (commutationTimerCounterArray[0]+commutationTimerCounterArray[1]+commutationTimerCounterArray[2]+commutationTimerCounterArray[3]+commutationTimerCounterArray[4]+commutationTimerCounterArray[5])/12;
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, commutationTimerCounterAverage + commutationTimerOffset);
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
-		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];
+
+		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];*/
 
 		waitForCommutation = 1;
 
@@ -357,26 +386,30 @@ void COMP1_2_3_IRQHandler(void)
 
 	else if(__HAL_COMP_COMP2_EXTI_GET_FLAG() && waitForCommutation == 0){
 		HAL_COMP_Stop_IT(&hcomp2);
-		commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
+		sConfig.Channel = ADC_CHANNEL_3;
+
+		/*commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
 		commutationTimerCounterAverage = (commutationTimerCounterArray[0]+commutationTimerCounterArray[1]+commutationTimerCounterArray[2]+commutationTimerCounterArray[3]+commutationTimerCounterArray[4]+commutationTimerCounterArray[5])/12;
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, commutationTimerCounterAverage + commutationTimerOffset);
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
-		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];
+		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];*/
 
 		waitForCommutation = 1;
 	}
 
 	else if(__HAL_COMP_COMP3_EXTI_GET_FLAG() && waitForCommutation == 0){
 		HAL_COMP_Stop_IT(&hcomp3);
-		commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
+		sConfig.Channel = ADC_CHANNEL_4;
+
+		/*commutationTimerCounterArray[5] = __HAL_TIM_GET_COUNTER(&htim3);
 		commutationTimerCounterAverage = (commutationTimerCounterArray[0]+commutationTimerCounterArray[1]+commutationTimerCounterArray[2]+commutationTimerCounterArray[3]+commutationTimerCounterArray[4]+commutationTimerCounterArray[5])/12;
 		__HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, commutationTimerCounterAverage + commutationTimerOffset);
 		__HAL_TIM_SET_COUNTER(&htim3, 0);
-		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];
+		for(uint8_t i = 0; i<5; i++) commutationTimerCounterArray[i] = commutationTimerCounterArray[i+1];*/
 
 		waitForCommutation = 1;
 
-		if(setPWM > 300 && pwmState == 0){
+		/*if(setPWM > 300 && pwmState == 0){
 			HAL_GPIO_WritePin(GPIOB, OUT_A_Pin | OUT_B_Pin | OUT_C_Pin, GPIO_PIN_SET);
 
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_5);
@@ -392,14 +425,14 @@ void COMP1_2_3_IRQHandler(void)
 			 TIM1->CCR5 = setPWM + compWindowOffset;
 			 pwmState = 1;
 			 HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_5);
-		}
+		}*/
 
-		if(setPWM > 300 && pwmState == 1 && oc5Value != oc5ValueOld){
+		/*if(setPWM > 300 && pwmState == 1 && oc5Value != oc5ValueOld){
 			HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 1900 + oc5Value);
 			oc5ValueOld = oc5Value;
-		}
+		}*/
 
-		if(setPWM <= 250 && pwmState == 1){
+		/*if(setPWM <= 250 && pwmState == 1){
 			HAL_GPIO_WritePin(GPIOB, OUT_A_Pin | OUT_B_Pin | OUT_C_Pin, GPIO_PIN_RESET);
 
 			HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_5);
@@ -414,9 +447,37 @@ void COMP1_2_3_IRQHandler(void)
 			HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC5B, TIM_CHANNEL_5);
 			TIM1->CCR5 = setPWM + compWindowOffset;
 			pwmState = 0;
-			HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_5);
+			HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_5);*/
+		//}
+	}
+
+	TIM1->CCR5 = setPWM + compWindowOffset;
+	TIM1->CCR2 = setPWM;
+
+	adcOffset = 1000;
+	adcIntegral = 0;
+	HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+	HAL_ADC_Start_IT(&hadc2);
+	//HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
+
+/*	adcOffset = 100;
+	HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+	HAL_ADC_Start(&hadc2);
+	//for(int i=0;i<50;i++) asm("nop");
+
+	while(adcIntegral <= adcOffset){
+		if(__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_EOC) == SET){
+			adcIntegral += HAL_ADC_GetValue(&hadc2);
+			for(int i=0; i<50; i++);
+			//__HAL_ADC_CLEAR_FLAG(&hadc2, ADC_FLAG_EOC);
 		}
 	}
+
+	HAL_ADC_Stop(&hadc2);
+	adcIntegral = 0;
+	commutationPattern(NEXT);*/
+
+
   /* USER CODE END COMP1_2_3_IRQn 0 */
   HAL_COMP_IRQHandler(&hcomp1);
   HAL_COMP_IRQHandler(&hcomp2);

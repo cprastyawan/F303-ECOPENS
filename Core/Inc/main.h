@@ -104,11 +104,11 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 #define map(x,in_min,in_max,out_min,out_max) ( (x-in_min) * (out_max-out_min) / (in_max-in_min) + out_min )
 #define constrain(nilaix,bawah,atas) ( (nilaix)<(bawah) ? (bawah) : ( (nilaix)>(atas) ? (atas) : (nilaix) ) )
-#define getRPM(cnt) (60 / (cnt * 0.000001)) *  0.166667
-#define PWM_MAX 1620
+#define getRPM(cnt) (360 / (cnt / 72000000)) *  0.1666667
+#define PWM_MAX 1500
 #define PWM_MIN 0
-#define FREQ_INPUT_PWM_MAX 51
-#define FREQ_INPUT_PWM_MIN 49
+#define FREQ_INPUT_PWM_MAX 50.1
+#define FREQ_INPUT_PWM_MIN 49.99
 #define NEXT 9
 #define STEP_0 0
 #define STEP_1 1
