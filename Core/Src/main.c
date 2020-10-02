@@ -1193,7 +1193,7 @@ void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if(htim->Instance == htim6){
+	if(htim->Instance == TIM6){
 		HAL_GPIO_TogglePin(GPIOB, LED1_Pin | LED2_Pin);
 	}
 }
