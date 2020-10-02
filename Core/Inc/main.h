@@ -83,6 +83,10 @@ void Error_Handler(void);
 #define OUT_B_GPIO_Port GPIOB
 #define OUT_C_Pin GPIO_PIN_10
 #define OUT_C_GPIO_Port GPIOB
+#define LED1_Pin GPIO_PIN_12
+#define LED1_GPIO_Port GPIOB
+#define LED2_Pin GPIO_PIN_13
+#define LED2_GPIO_Port GPIOB
 #define COMP_PHASEC_Pin GPIO_PIN_14
 #define COMP_PHASEC_GPIO_Port GPIOB
 #define PWMOUT_Pin GPIO_PIN_8
@@ -99,8 +103,6 @@ void Error_Handler(void);
 #define IN_C_GPIO_Port GPIOB
 #define INH_C_Pin GPIO_PIN_8
 #define INH_C_GPIO_Port GPIOB
-#define LED_Pin GPIO_PIN_9
-#define LED_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 #define map(x,in_min,in_max,out_min,out_max) ( (x-in_min) * (out_max-out_min) / (in_max-in_min) + out_min )
 #define constrain(nilaix,bawah,atas) ( (nilaix)<(bawah) ? (bawah) : ( (nilaix)>(atas) ? (atas) : (nilaix) ) )
