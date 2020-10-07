@@ -69,6 +69,8 @@ void Error_Handler(void);
 #define ADC_CS_GPIO_Port GPIOA
 #define COMP_PHASEA_Pin GPIO_PIN_1
 #define COMP_PHASEA_GPIO_Port GPIOA
+#define PWMIN_Pin GPIO_PIN_2
+#define PWMIN_GPIO_Port GPIOA
 #define COMP_PHASEB_Pin GPIO_PIN_3
 #define COMP_PHASEB_GPIO_Port GPIOA
 #define ADC_PHASEA_Pin GPIO_PIN_5
@@ -107,10 +109,10 @@ void Error_Handler(void);
 #define map(x,in_min,in_max,out_min,out_max) ( (x-in_min) * (out_max-out_min) / (in_max-in_min) + out_min )
 #define constrain(nilaix,bawah,atas) ( (nilaix)<(bawah) ? (bawah) : ( (nilaix)>(atas) ? (atas) : (nilaix) ) )
 #define getRPM(cnt) (360 / (cnt / 72000000)) *  0.1666667
-#define PWM_MAX 1500
+#define PWM_MAX 1000
 #define PWM_MIN 0
-#define FREQ_INPUT_PWM_MAX 50.1
-#define FREQ_INPUT_PWM_MIN 49.99
+#define FREQ_INPUT_PWM_MAX 49.20
+#define FREQ_INPUT_PWM_MIN 49.00
 #define NEXT 9
 #define STEP_0 0
 #define STEP_1 1

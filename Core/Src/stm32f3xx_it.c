@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,9 +91,10 @@ extern int16_t compWindowOffset;
 extern DAC_HandleTypeDef hdac;
 
 extern ADC_ChannelConfTypeDef sConfig;
-extern uint32_t adcIntegral;
-extern uint32_t adcOffset;
+extern float adcIntegral;
+extern float adcOffset;
 extern uint8_t adcCounter;
+extern TIM_HandleTypeDef htim7;
 
 extern uint32_t tim2cnt;
 extern bool readRotation;
@@ -262,7 +264,9 @@ void ADC1_2_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC1_2_IRQn 0 */
 	if(__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_EOC) == SET){
-		adcIntegral += HAL_ADC_GetValue(&hadc2);
+		if(__HAL_TIM_GET_COUNTER(&htim1) > __HAL_TIM_GET_COMPARE(&htim1, TIM_CHANNEL_1)){
+			adcIntegral += HAL_ADC_GetValue(&hadc2) * ((float)__HAL_TIM_GET_COUNTER(&htim7) * 0.000001f);
+		}
 	}
 	if(adcIntegral >= adcOffset){
 		HAL_ADC_Stop_IT(&hadc2);
@@ -468,32 +472,29 @@ void COMP1_2_3_IRQHandler(void)
 		//}
 	}
 
-	TIM1->CCR5 = setPWM + compWindowOffset;
-	TIM1->CCR2 = setPWM;
+	//TIM1->CCR5 = setPWM + compWindowOffset;
+	//TIM1->CCR1 = setPWM;
 
-	adcOffset = 1000;
-	adcIntegral = 0;
 	HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+	__HAL_TIM_SET_COUNTER(&htim7, 0);
 	HAL_ADC_Start_IT(&hadc2);
 	//HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
 
-/*	adcOffset = 100;
-	HAL_ADC_ConfigChannel(&hadc2, &sConfig);
+
+	/*HAL_ADC_ConfigChannel(&hadc2, &sConfig);
 	HAL_ADC_Start(&hadc2);
 	//for(int i=0;i<50;i++) asm("nop");
 
 	while(adcIntegral <= adcOffset){
 		if(__HAL_ADC_GET_FLAG(&hadc2, ADC_FLAG_EOC) == SET){
 			adcIntegral += HAL_ADC_GetValue(&hadc2);
-			for(int i=0; i<50; i++);
+			//for(int i=0; i<50; i++);
 			//__HAL_ADC_CLEAR_FLAG(&hadc2, ADC_FLAG_EOC);
 		}
 	}
-
 	HAL_ADC_Stop(&hadc2);
 	adcIntegral = 0;
 	commutationPattern(NEXT);*/
-
 
   /* USER CODE END COMP1_2_3_IRQn 0 */
   HAL_COMP_IRQHandler(&hcomp1);
